@@ -11,7 +11,7 @@ if on_vent=="yes":
     rr=input("Enter respiratory rate(RR):")
     tv=input("Enter tidal volume(TV):")
     peep=input("Enter PEEP:")
-    fio2=input("EnterFio2(%):")
+    fio2=input("Enter Fio2 (%):")
 print("\n---Blood Gas Result---")
 #Step 1:Determine acid-base status
 if ph<7.35:
@@ -39,13 +39,35 @@ elif ph>7.45:
         primary_disorder="Metabolic Alkalosis"
     else:
         primary_disorder="Mixed or unclear"
-    print("Primary disorder:",primary_disorder)
-#Step 3:Oxygenation note
+print("Primary disorder:",primary_disorder)
+secondary_disorder=""
+#step 3:Check compensation for metabolic acidosis 
+if primary_disorder=="Metabolic Acidosis":
+    expected_pco2 =(1.5*hco3)+8
+    low_range=expected_pco2-2
+    high_range=expected_pco2+2
+    print("Expected pCo2:", round(expected_pco2,1),f"(range{round(low_range,1)}-{round(high_range,1)})")
+    if pco2< low_range:
+        print("Compensation: Lower than expected pCO2")
+        secondary_disorder="Respiratory Alkalosis"
+    elif pco2> high_range:
+        print("Compensation: Higher than expected pCO2")
+        secondary_disorder="Respiratory Acidosis"
+    else:
+        print("Compensation: Appropriate respiratory compensation")
+    if secondary_disorder!="":
+        print("Secondary disorder:", secondary_disorder)
+        print("Final interpretation:",primary_disorder,"+", secondary_disorder)
+    else:
+        print("Final interpretation:", primary_disorder,"(compensated)")
+#Step 4:Oxygenation note
 if sample_type =="ABG":
     if po2< 60:
         oxygenation_note="Severe hypoxemia"
     elif po2<80:
-        oxygenation_note="Pao2 within common normal range"
+        oxygenation_note="Mild to moderate hypoxemia"
+    elif po2 <= 100:
+        print("PaO2 within common normal range")
     else:
         oxygenation_note="PaO2 above common reference range"
 elif sample_type =="VBG":
@@ -55,31 +77,47 @@ elif sample_type == "CBG":
 else:
     oxygenation_note="Unknown sample type - oxygenation interpretation limited"
 print("Oxygenation:",oxygenation_note)
-#Step 4:Ventilator context
+#Step 5: Current Ventilator settings
 if on_vent == "yes":
-    print(" Ventilator status: On mechanical ventilation")
-    print("Mode:",mode)
-    print("RR",rr)
-    print("TV",tv)
-    print("PEEP",peep)
-    print("FIO2",fio2)
+    print("Ventilator status: On mechanical ventilation")
+    print("Current ventilator settings:")
+    print("Mode:", mode)
+    print("RR:", rr)
+    print("TV:", tv)
+    print("peep:", peep)
+    print("FIO2:", fio2)
 else:
     print("Ventilator status: Not on mechanical ventilation")
-#Step 5: Risk flag
+#Step 6: Ventilator suggestion
+if on_vent=="yes":
+    print("\n---Ventilator Suggestion---")
+    if secondary_disorder:
+        print("Suggestion: Mixed disorder - treat underlying cause, avoid immediate ventilator changes")
+    elif"Respiratory Acidosis" in primary_disorder:
+        print("Suggestion: Increase minute ventilation(increase RR first; consider increasing VT cautiously)")
+    elif"Respiratory Alkalosis" in primary_disorder:
+        print("Suggestion: Decrease minute ventilation(decrease RR first; consider decreasing VT if appropriate)")
+    elif primary_disorder=="Metabolic Acidosis":
+        print("Suggestion: Ensure adequate ventilation,consider underlying cause(do not suppress compensation)")
+    elif primary_disorder=="Metabolic Alkalosis":
+        print("Suggestion: Consider reducing ventilation cautiously if clinically indicated")
+    else:
+        print("Suggestion: Clinical review required")
+#Step 7: Risk flag
 if ph<7.20:
     risk_flag="High-severe acidemia"
 elif ph>7.55:
     risk_flag="High-severe alkalemia"
 elif sample_type=="ABG" and po2<60:
     risk_flag="High-severe hypoxemia"
-elif "mixed" in primary_disorder.lower():
-    risk_flag="Moderate to High-possible mixed disorder"
+elif "mixed" in primary_disorder.lower() or secondary_disorder:
+    risk_flag="Moderate to High - possible mixed disorder"
 elif on_vent=="yes":
-    risk_flag="Moderate- ventilated patientrequires close clinical review"
+    risk_flag="Moderate - ventilated patientrequires close monitoring "
 else:
     risk_flag="Moderate/Low - clinical correlation required"
 print("Risk flag:", risk_flag)
-#Step 6: safety note
+#Step 8: safety note
 print("\nSafety note:This tool is for educational and clinical support purposes only")
 print("it must not be used as a standalone diagnosis or treatment decision tool.")
 print("Clinical correlation and professional review are required.")
