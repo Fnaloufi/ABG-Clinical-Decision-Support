@@ -1,6 +1,6 @@
 # ABG Clinical Decision Support Tool - V1
 # For educational and clinical support use only
-sample_type=input("Enter sample type(ABG/VBG/CBG):").upper()
+sample_type=input("Enter sample type(ABG/VBG/CBG):").upper() 
 ph=float(input("Enter pH:"))
 pco2=float(input("Enter PCO2(mmHg):"))
 hco3=float(input("Enter HCO3)(mEq/L):"))
