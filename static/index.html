@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ABG Clinical Decision Support</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    :root{
+      --bg:#EEF1F4; --surface:#FFFFFF; --ink:#0E1C26; --muted:#5A6B75;
+      --line:#D5DCE1; --line-soft:#E7ECEF;
+      --primary:#0C6B74; --primary-tint:#E3F0F1; --primary-ink:#08484E;
+      --green:#2E9E6B; --amber:#D69A21; --orange:#DC6B2F; --red:#C33A3A;
+      --shadow:0 1px 2px rgba(14,28,38,.06),0 8px 24px rgba(14,28,38,.05);
+    }
+    *{box-sizing:border-box}
+    body{margin:0}
+    .abg-root{font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.45}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+    .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+    .topbar{background:var(--ink);color:#fff;padding:14px 20px}
+    .topbar-wrap{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .brand{display:flex;align-items:baseline;gap:10px}
+    .brand b{font-size:16px;font-weight:700;letter-spacing:-.01em}
+    .brand .ver{font-size:11px;color:#8fa3ad;letter-spacing:.06em}
+    .safety-strip{margin-left:auto;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:6px 12px;border-radius:999px;font-size:12px;color:#dbe6e9}
+    .safety-dot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none}
+    .layout{max-width:1180px;margin:0 auto;padding:22px 20px 60px;display:grid;grid-template-columns:380px 1fr;gap:22px;align-items:start}
+    @media (max-width:900px){.layout{grid-template-columns:1fr}}
+    .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+    .panel-h{padding:14px 18px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between}
+    .panel-h h2{margin:0;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--primary-ink);font-weight:700}
+    .panel-b{padding:18px}
+    .field{margin-bottom:14px}
+    .field>label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--ink);background:#fff;outline:none}
+    input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+    select{font-family:'IBM Plex Sans',sans-serif}
+    .seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+    .seg button{flex:1;padding:9px;border:none;background:#fff;font-family:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+    .seg button.on{background:var(--primary);color:#fff}
+    .subhead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:18px 0 10px;padding-top:14px;border-top:1px dashed var(--line)}
+    .actions{display:flex;gap:10px;margin-top:8px}
+    .btn{flex:1;padding:12px;border-radius:10px;border:1px solid transparent;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;transition:.12s}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-primary:hover{background:var(--primary-ink)}
+    .btn-ghost{background:#fff;border-color:var(--line);color:var(--primary-ink)}
+    .btn-ghost:hover{background:var(--primary-tint)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .report-head{display:grid;grid-template-columns:1fr auto;gap:18px}
+    @media (max-width:560px){.report-head{grid-template-columns:1fr}}
+    .dx-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px}
+    .dx-main{font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+    .dx-sub{margin-top:6px;font-size:13px;color:var(--muted)}
+    .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+    .tag{font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;background:var(--primary-tint);color:var(--primary-ink);letter-spacing:.03em}
+    .tag.warn{background:#fbe6d0;color:#8a5a12}
+    .spine{width:150px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+    .spine-top{padding:12px 12px 8px;text-align:center}
+    .spine-score{font-size:34px;font-weight:700;line-height:1}
+    .spine-score small{font-size:15px;color:var(--muted);font-weight:600}
+    .spine-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+    .spine-bars{display:flex;flex-direction:column-reverse;gap:2px;padding:8px}
+    .spine-seg{height:9px;border-radius:2px;background:var(--line-soft)}
+    .spine-prio{padding:9px;text-align:center;font-size:11px;font-weight:800;letter-spacing:.05em;color:#fff}
+    .rows{margin-top:16px;border-top:1px solid var(--line-soft)}
+    .row{display:grid;grid-template-columns:150px 1fr;gap:14px;padding:11px 0;border-bottom:1px solid var(--line-soft)}
+    @media (max-width:560px){.row{grid-template-columns:1fr;gap:3px}}
+    .row .k{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+    .row .v{font-size:14px}
+    .card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:14px;background:#fbfcfd}
+    .card h3{margin:0 0 10px;font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--primary-ink);font-weight:700}
+    .kv{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13px;border-bottom:1px dashed var(--line-soft)}
+    .kv:last-child{border-bottom:none}
+    .kv .kk{color:var(--muted)}
+    .list{margin:0;padding-left:0;list-style:none}
+    .list li{position:relative;padding:6px 0 6px 20px;font-size:13px;border-bottom:1px dashed var(--line-soft)}
+    .list li:last-child{border-bottom:none}
+    .list li::before{content:"";position:absolute;left:4px;top:12px;width:6px;height:6px;border-radius:50%;background:var(--primary)}
+    .list.action li::before{background:var(--orange);border-radius:2px}
+    .safety{margin-top:16px;background:#fff7ea;border:1px solid #f0d8a8;border-radius:12px;padding:14px 16px}
+    .safety .st{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8a5a12;font-weight:700;margin-bottom:6px}
+    .safety p{margin:4px 0;font-size:12.5px;color:#6b4e13}
+    .safety .ar{direction:rtl;text-align:right;font-size:13px}
+    .errbox{background:#fdecec;border:1px solid #f0b8b8;border-radius:12px;padding:16px}
+    .errbox .et{font-weight:700;color:var(--red);margin-bottom:4px}
+    .empty{padding:44px 20px;text-align:center;color:var(--muted)}
+    .empty h3{margin:0 0 6px;color:var(--ink);font-size:15px}
+    .empty p{margin:0;font-size:13px}
+    .sample-note{font-size:11px;color:#8a5a12;background:#fbe6d0;border:1px solid #f0d8a8;padding:6px 10px;border-radius:7px;margin-bottom:14px;font-weight:600}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+    const { useState } = React;
+
+    const PRIO_COLOR = {
+      "IMMEDIATE ICU ACTION": "var(--red)",
+      "URGENT REVIEW": "var(--orange)",
+      "MODERATE": "var(--amber)",
+      "STABLE": "var(--green)",
+    };
+    function scoreColor(s){ if(s>=9)return"var(--red)"; if(s>=7)return"var(--orange)"; if(s>=4)return"var(--amber)"; return"var(--green)"; }
+    const N = (v) => (v===null||v===undefined||v==="" ? "—" : v);
+
+    const SAMPLE = {
+      valid:true, warnings:["FiO2 interpreted on a 0–100 scale."],
+      acid_base_status:"Acidemia", primary_disorder:"Respiratory Acidosis", secondary_disorder:"",
+      final_interpretation:"Acute Respiratory Acidosis",
+      compensation:"Expected HCO3: acute ~26.4, chronic ~31.2",
+      compensation_status:"Consistent with an ACUTE process (minimal renal compensation)",
+      anion_gap:12.0, anion_gap_corrected:null, anion_gap_interpretation:"Normal anion gap (12.0)",
+      delta_ratio:null, delta_ratio_interpretation:"",
+      oxygenation_status:"Severe oxygenation impairment", oxygenation_note:"", pf_ratio:88.0,
+      ventilator_status:"On mechanical ventilation",
+      ventilator_settings:{Mode:"PC-AC",RR:22,TV:380,PEEP:12,FiO2:80},
+      ibw_kg:66.7, tv_per_kg:5.7, lung_protective:"Lung-protective (5.7 mL/kg IBW)",
+      rsbi:57.9, rsbi_interpretation:"RSBI 57.9 <= 105: weaning may be favourable (clinical correlation required)",
+      context_interpretation:"Severe ARDS (P/F < 100)",
+      context_notes:["P/F-based staging only. Full Berlin criteria also require acute onset, bilateral infiltrates on imaging, and exclusion of a purely cardiogenic cause — confirm clinically.","Critical hypoxemia — urgent escalation required"],
+      ventilator_suggestions:["Apply lung-protective ventilation (target 4–6 mL/kg IBW)","Increase PEEP and optimize FiO2 before increasing minute ventilation","Consider prone positioning (P/F < 100)"],
+      risk_flag:"Critical — life-threatening hypoxemia",
+      attention_index:10, attention_index_label:"Custom heuristic severity index (not a validated score)",
+      priority_level:"IMMEDIATE ICU ACTION",
+      clinical_flags:["ARDS","Critical Hypoxemia","Ventilated Patient"],
+      clinical_considerations:["Increase PEEP (stepwise, titrated strategy)","Optimize FiO2 to target SpO2 88–95%","Apply lung-protective ventilation (4–6 mL/kg IBW)","Consider prone positioning","Evaluate for ECMO referral if refractory hypoxemia"],
+      safety_note:"Support tool for a qualified clinician. It does not replace clinical judgment.",
+      safety_note_ar:"أداة مساندة للأخصائي المؤهل، ولا تُغني عن الحكم السريري.",
+    };
+
+    function App(){
+      const [onVent,setOnVent]=useState("no");
+      const [loading,setLoading]=useState(false);
+      const [result,setResult]=useState(null);
+      const [isSample,setIsSample]=useState(false);
+      const [err,setErr]=useState("");
+      const [f,setF]=useState({sample_type:"ABG",clinical_context:"General",ph:"",pco2:"",hco3:"",po2:"",na:"",cl:"",mode:"",rr:"",tv:"",peep:"",fio2:"",albumin:"",height_cm:"",sex:"male",resp_chronicity:"unknown"});
+      const set=(k)=>(e)=>setF({...f,[k]:e.target.value});
+
+      async function interpret(){
+        setErr(""); setLoading(true); setIsSample(false);
+        const num=(x)=>(x===""?null:parseFloat(x));
+        const payload={sample_type:f.sample_type,clinical_context:f.clinical_context,ph:num(f.ph),pco2:num(f.pco2),hco3:num(f.hco3),po2:num(f.po2),na:num(f.na),cl:num(f.cl),on_vent:onVent,mode:f.mode,rr:num(f.rr),tv:num(f.tv),peep:num(f.peep),fio2:num(f.fio2),albumin:num(f.albumin),height_cm:num(f.height_cm),sex:f.sex,resp_chronicity:f.resp_chronicity};
+        try{
+          const res=await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+          if(!res.ok) throw new Error("API "+res.status);
+          setResult(await res.json());
+        }catch(e){
+          setErr("تعذّر الوصول للمحرك. تأكد أن الخادم يعمل (uvicorn api:app). أو اضغط «حالة نموذجية» لمعاينة الشكل.");
+          setResult(null);
+        }finally{ setLoading(false); }
+      }
+      function loadSample(){ setErr(""); setResult(SAMPLE); setIsSample(true); }
+
+      return (
+        <div className="abg-root">
+          <div className="topbar"><div className="topbar-wrap">
+            <div className="brand"><b>ABG · Clinical Decision Support</b><span className="ver mono">v1.0.0</span></div>
+            <div className="safety-strip"><span className="safety-dot"></span>Support tool — does not replace clinical judgment</div>
+          </div></div>
+          <div className="layout">
+            <div className="panel">
+              <div className="panel-h"><h2>Blood gas input</h2></div>
+              <div className="panel-b">
+                <div className="grid2">
+                  <div className="field"><label>Sample</label><select value={f.sample_type} onChange={set("sample_type")}><option>ABG</option><option>VBG</option><option>CBG</option></select></div>
+                  <div className="field"><label>Context</label><select value={f.clinical_context} onChange={set("clinical_context")}><option>General</option><option>ARDS</option><option>COPD</option></select></div>
+                </div>
+                <div className="grid3">
+                  <div className="field"><label>pH</label><input value={f.ph} onChange={set("ph")} placeholder="7.40" inputMode="decimal"/></div>
+                  <div className="field"><label>PaCO₂</label><input value={f.pco2} onChange={set("pco2")} placeholder="40" inputMode="decimal"/></div>
+                  <div className="field"><label>HCO₃</label><input value={f.hco3} onChange={set("hco3")} placeholder="24" inputMode="decimal"/></div>
+                </div>
+                <div className="grid3">
+                  <div className="field"><label>PaO₂</label><input value={f.po2} onChange={set("po2")} placeholder="90" inputMode="decimal"/></div>
+                  <div className="field"><label>Na⁺</label><input value={f.na} onChange={set("na")} placeholder="140" inputMode="decimal"/></div>
+                  <div className="field"><label>Cl⁻</label><input value={f.cl} onChange={set("cl")} placeholder="104" inputMode="decimal"/></div>
+                </div>
+                <div className="grid2">
+                  <div className="field"><label>Albumin (opt)</label><input value={f.albumin} onChange={set("albumin")} placeholder="—" inputMode="decimal"/></div>
+                  <div className="field"><label>Resp. chronicity</label><select value={f.resp_chronicity} onChange={set("resp_chronicity")}><option value="unknown">unknown</option><option value="acute">acute</option><option value="chronic">chronic</option></select></div>
+                </div>
+                <div className="subhead">Mechanical ventilation</div>
+                <div className="seg">
+                  <button className={onVent==="no"?"on":""} onClick={()=>setOnVent("no")}>Not ventilated</button>
+                  <button className={onVent==="yes"?"on":""} onClick={()=>setOnVent("yes")}>On ventilator</button>
+                </div>
+                {onVent==="yes" && (
+                  <div style={{marginTop:14}}>
+                    <div className="grid2">
+                      <div className="field"><label>Mode</label><input value={f.mode} onChange={set("mode")} placeholder="PC-AC" style={{fontFamily:"'IBM Plex Sans',sans-serif"}}/></div>
+                      <div className="field"><label>FiO₂ (%)</label><input value={f.fio2} onChange={set("fio2")} placeholder="50" inputMode="decimal"/></div>
+                    </div>
+                    <div className="grid3">
+                      <div className="field"><label>RR</label><input value={f.rr} onChange={set("rr")} placeholder="18" inputMode="decimal"/></div>
+                      <div className="field"><label>TV (mL)</label><input value={f.tv} onChange={set("tv")} placeholder="420" inputMode="decimal"/></div>
+                      <div className="field"><label>PEEP</label><input value={f.peep} onChange={set("peep")} placeholder="8" inputMode="decimal"/></div>
+                    </div>
+                    <div className="grid2">
+                      <div className="field"><label>Height (cm)</label><input value={f.height_cm} onChange={set("height_cm")} placeholder="170" inputMode="decimal"/></div>
+                      <div className="field"><label>Sex (for IBW)</label><select value={f.sex} onChange={set("sex")}><option value="male">male</option><option value="female">female</option></select></div>
+                    </div>
+                  </div>
+                )}
+                <div className="actions">
+                  <button className="btn btn-primary" onClick={interpret} disabled={loading}>{loading?"Interpreting…":"Interpret"}</button>
+                  <button className="btn btn-ghost" onClick={loadSample}>Load sample</button>
+                </div>
+              </div>
+            </div>
+            <div className="panel">
+              <div className="panel-h"><h2>Interpretation</h2>{result&&result.valid&&(<span className="eyebrow">{f.sample_type} · {isSample?"SAMPLE":f.clinical_context}</span>)}</div>
+              <div className="panel-b">
+                {err && (<div className="errbox"><div className="et">Cannot reach engine</div><div style={{fontSize:13,color:"var(--muted)"}}>{err}</div></div>)}
+                {!result && !err && (<div className="empty"><h3>Enter values, then Interpret</h3><p>Or tap “Load sample” to preview a full report.</p></div>)}
+                {result && !result.valid && (<div className="errbox"><div className="et">Validation stopped interpretation</div><div style={{fontSize:13}}>{result.error}</div></div>)}
+                {result && result.valid && <Report r={result} isSample={isSample}/>}
+                {result && (result.safety_note||result.safety_note_ar) && (
+                  <div className="safety"><div className="st">Clinical safety</div>
+                    {result.safety_note && <p>{result.safety_note}</p>}
+                    {result.safety_note_ar && <p className="ar">{result.safety_note_ar}</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Report({r,isSample}){
+      const bars=Array.from({length:10});
+      const sc=scoreColor(r.attention_index);
+      return (
+        <React.Fragment>
+          {isSample && <div className="sample-note">Illustrative sample — not a computed result.</div>}
+          <div className="report-head">
+            <div>
+              <div className="dx-label">Final interpretation</div>
+              <div className="dx-main">{N(r.final_interpretation)||N(r.primary_disorder)}</div>
+              <div className="dx-sub">{N(r.acid_base_status)}{r.secondary_disorder?" · +"+r.secondary_disorder:""}</div>
+              <div className="tags">
+                {(r.clinical_flags||[]).map((t,i)=><span className="tag" key={i}>{t}</span>)}
+                {(r.warnings||[]).map((t,i)=><span className="tag warn" key={"w"+i}>⚠ {t}</span>)}
+              </div>
+            </div>
+            <div className="spine">
+              <div className="spine-top"><div className="spine-score mono" style={{color:sc}}>{r.attention_index}<small>/10</small></div><div className="spine-label">Attention index</div></div>
+              <div className="spine-bars">{bars.map((_,i)=><div className="spine-seg" key={i} style={{background:i<r.attention_index?scoreColor(i+1):"var(--line-soft)"}}></div>)}</div>
+              <div className="spine-prio" style={{background:PRIO_COLOR[r.priority_level]||"var(--muted)"}}>{r.priority_level}</div>
+            </div>
+          </div>
+          <div className="rows">
+            <div className="row"><div className="k">Primary disorder</div><div className="v">{N(r.primary_disorder)}</div></div>
+            {r.compensation && <div className="row"><div className="k">Compensation</div><div className="v"><span className="mono">{r.compensation}</span><br/>{r.compensation_status}</div></div>}
+            <div className="row"><div className="k">Risk flag</div><div className="v">{N(r.risk_flag)}</div></div>
+          </div>
+          <div className="card"><h3>Anion gap</h3>
+            <div className="kv"><span className="kk">Anion gap</span><span className="mono">{N(r.anion_gap)}</span></div>
+            {r.anion_gap_corrected!==null && <div className="kv"><span className="kk">Albumin-corrected</span><span className="mono">{r.anion_gap_corrected}</span></div>}
+            <div className="kv"><span className="kk">Interpretation</span><span style={{textAlign:"right"}}>{N(r.anion_gap_interpretation)}</span></div>
+            {r.delta_ratio!==null && <div className="kv"><span className="kk">Delta ratio</span><span className="mono">{r.delta_ratio}</span></div>}
+          </div>
+          <div className="card"><h3>Oxygenation &amp; ventilation</h3>
+            <div className="kv"><span className="kk">Status</span><span>{N(r.oxygenation_status||r.oxygenation_note)}</span></div>
+            {r.pf_ratio!==null && <div className="kv"><span className="kk">P/F ratio</span><span className="mono">{r.pf_ratio}</span></div>}
+            <div className="kv"><span className="kk">Ventilation</span><span>{N(r.ventilator_status)}</span></div>
+            {r.ibw_kg!==null && <div className="kv"><span className="kk">IBW (Devine)</span><span className="mono">{r.ibw_kg} kg</span></div>}
+            {r.tv_per_kg!==null && <div className="kv"><span className="kk">TV per kg IBW</span><span className="mono">{r.tv_per_kg} mL/kg</span></div>}
+            {r.lung_protective && <div className="kv"><span className="kk">Lung-protective</span><span style={{textAlign:"right"}}>{r.lung_protective}</span></div>}
+            {r.rsbi!==null && <div className="kv"><span className="kk">RSBI</span><span className="mono">{r.rsbi}</span></div>}
+          </div>
+          {(r.context_interpretation||(r.context_notes||[]).length>0) && (
+            <div className="card"><h3>Clinical context</h3>
+              {r.context_interpretation && <div className="kv"><span className="kk">Assessment</span><span style={{textAlign:"right",fontWeight:600}}>{r.context_interpretation}</span></div>}
+              {(r.context_notes||[]).length>0 && <ul className="list" style={{marginTop:8}}>{r.context_notes.map((n,i)=><li key={i}>{n}</li>)}</ul>}
+            </div>
+          )}
+          {(r.ventilator_suggestions||[]).length>0 && (<div className="card"><h3>Ventilator suggestions</h3><ul className="list">{r.ventilator_suggestions.map((s,i)=><li key={i}>{s}</li>)}</ul></div>)}
+          {(r.clinical_considerations||[]).length>0 && (<div className="card"><h3>Clinical considerations · {r.priority_level}</h3><ul className="list action">{r.clinical_considerations.map((a,i)=><li key={i}>{a}</li>)}</ul></div>)}
+          <div style={{marginTop:12,fontSize:11,color:"var(--muted)"}}>{r.attention_index_label}</div>
+        </React.Fragment>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>

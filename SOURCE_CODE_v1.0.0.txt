@@ -1,0 +1,1236 @@
+======================================================
+  FILE: constants.py
+  CritiCore-CDSS v1.0.0 — Author: Fahad Aloufi
+======================================================
+
+"""
+constants.py
+=============
+Clinical thresholds and physiological reference ranges for the ABG CDSS.
+
+Project : CritiCore-CDSS
+Author  : Fahad Aloufi (Head of Respiratory Therapy)
+
+All clinically-meaningful numbers live here (single source of truth) so the
+engine contains no "magic numbers". Every value is referenced to a standard
+critical-care / acid-base source and can be reviewed by a clinician in one place.
+
+References:
+- Winters RW. Terminology of acid-base disorders. Ann Intern Med. 1965.
+- Berlin Definition of ARDS. JAMA. 2012;307(23):2526-2533.
+- Marino's The ICU Book, 4th ed. (compensation & anion gap rules of thumb)
+- ARDSNet ARMA trial (lung-protective ventilation, 4-6 mL/kg IBW)
+"""
+
+# --------------------------------------------------------------------------- #
+#  Acid-base reference thresholds
+# --------------------------------------------------------------------------- #
+PH_LOW = 7.35            # below -> acidemia
+PH_HIGH = 7.45           # above -> alkalemia
+PH_CRIT_LOW = 7.20       # severe acidemia
+PH_CRIT_HIGH = 7.55      # severe alkalemia
+
+PACO2_NORMAL = 40.0      # mmHg, reference midpoint
+PACO2_LOW = 35.0
+PACO2_HIGH = 45.0
+
+HCO3_NORMAL = 24.0       # mEq/L, reference midpoint
+HCO3_LOW = 22.0
+HCO3_HIGH = 26.0
+
+# --------------------------------------------------------------------------- #
+#  Anion gap
+# --------------------------------------------------------------------------- #
+# AG = Na - (Cl + HCO3).  Normal range varies by assay; 8-12 is the classic band.
+ANION_GAP_NORMAL_LOW = 8.0
+ANION_GAP_NORMAL_HIGH = 12.0
+ANION_GAP_REFERENCE = 12.0     # used as the "normal" anchor for delta ratio
+ALBUMIN_NORMAL = 4.0           # g/dL, for albumin-corrected AG
+ALBUMIN_CORRECTION_FACTOR = 2.5  # add 2.5 to AG per 1 g/dL fall in albumin
+
+# Delta ratio interpretation bands  (AG-12)/(24-HCO3)
+DELTA_RATIO_NAGMA_MAX = 0.4    # < 0.4  -> pure normal-AG metabolic acidosis
+DELTA_RATIO_MIXED_MAX = 1.0    # 0.4-1  -> mixed HAGMA + NAGMA
+DELTA_RATIO_PURE_MAX = 2.0     # 1-2    -> pure HAGMA
+#                                > 2    -> HAGMA + metabolic alkalosis / chronic resp acidosis
+
+# --------------------------------------------------------------------------- #
+#  Compensation formula coefficients
+# --------------------------------------------------------------------------- #
+# Winter's formula: expected PaCO2 = 1.5*HCO3 + 8  (+/- 2)
+WINTERS_SLOPE = 1.5
+WINTERS_INTERCEPT = 8.0
+WINTERS_TOLERANCE = 2.0
+
+# Metabolic alkalosis: expected PaCO2 = 0.7*HCO3 + 21  (+/- 2)
+MET_ALK_SLOPE = 0.7
+MET_ALK_INTERCEPT = 21.0
+MET_ALK_TOLERANCE = 2.0
+
+# Respiratory disorders: change in HCO3 per 10 mmHg change in PaCO2 from 40
+HCO3_PER_10_ACUTE_RESP_ACIDOSIS = 1.0     # acute:   +1  per +10 CO2
+HCO3_PER_10_CHRONIC_RESP_ACIDOSIS = 3.5   # chronic: +3.5 per +10 CO2
+HCO3_PER_10_ACUTE_RESP_ALKALOSIS = 2.0    # acute:   -2  per -10 CO2
+HCO3_PER_10_CHRONIC_RESP_ALKALOSIS = 4.5  # chronic: -4 to -5 per -10 CO2
+
+# --------------------------------------------------------------------------- #
+#  Oxygenation / P-F ratio  (Berlin ARDS staging)
+# --------------------------------------------------------------------------- #
+PF_NORMAL = 300          # >= 300 no significant impairment
+PF_MILD = 200            # 200-299 mild
+PF_MODERATE = 100        # 100-199 moderate ; < 100 severe
+PF_CRITICAL = 80         # < 80 life-threatening hypoxemia
+ARDS_MIN_PEEP = 5        # Berlin requires PEEP/CPAP >= 5 cmH2O
+
+PAO2_SEVERE_HYPOXEMIA = 60
+PAO2_MILD_HYPOXEMIA = 80
+PAO2_NORMAL_UPPER = 100
+
+# --------------------------------------------------------------------------- #
+#  Weaning (RSBI)
+# --------------------------------------------------------------------------- #
+# RSBI = RR / Vt(L).  > 105 predicts weaning failure (Yang & Tobin 1991).
+RSBI_FAILURE_THRESHOLD = 105
+
+# --------------------------------------------------------------------------- #
+#  Ideal Body Weight (Devine) & lung-protective tidal volume
+# --------------------------------------------------------------------------- #
+IBW_MALE_BASE = 50.0
+IBW_FEMALE_BASE = 45.5
+IBW_HEIGHT_COEFF = 0.91        # per cm above 152.4 cm (metric Devine)
+IBW_REFERENCE_HEIGHT_CM = 152.4
+LUNG_PROTECTIVE_TV_LOW = 4.0   # mL/kg IBW
+LUNG_PROTECTIVE_TV_HIGH = 6.0  # mL/kg IBW
+LUNG_PROTECTIVE_TV_CEILING = 8.0  # mL/kg IBW - above this is not protective
+
+# --------------------------------------------------------------------------- #
+#  Physiological input validation ranges  (reject / warn outside these)
+# --------------------------------------------------------------------------- #
+# (hard_min, hard_max) -> reject outside ; (warn_low, warn_high) -> flag as unusual
+VALIDATION_RANGES = {
+    "ph":    {"hard": (6.5, 8.0),   "plausible": (6.8, 7.8)},
+    "pco2":  {"hard": (5.0, 150.0), "plausible": (10.0, 120.0)},
+    "hco3":  {"hard": (2.0, 60.0),  "plausible": (5.0, 50.0)},
+    "po2":   {"hard": (10.0, 700.0),"plausible": (20.0, 600.0)},
+    "na":    {"hard": (100.0, 180.0),"plausible": (120.0, 160.0)},
+    "cl":    {"hard": (60.0, 140.0),"plausible": (80.0, 120.0)},
+    "fio2":  {"hard": (21.0, 100.0),"plausible": (21.0, 100.0)},
+    "peep":  {"hard": (0.0, 30.0),  "plausible": (0.0, 24.0)},
+    "rr":    {"hard": (1.0, 80.0),  "plausible": (4.0, 60.0)},
+    "tv":    {"hard": (50.0, 2000.0),"plausible": (150.0, 1000.0)},
+    "albumin": {"hard": (0.5, 6.0), "plausible": (1.5, 5.5)},
+    "height_cm": {"hard": (120.0, 220.0), "plausible": (140.0, 210.0)},
+}
+
+# --------------------------------------------------------------------------- #
+#  Clinical attention index (RULE-BASED HEURISTIC - not a validated score)
+# --------------------------------------------------------------------------- #
+# NOTE: This is a rule-based triage heuristic to direct clinician attention.
+# It is NOT a validated or prognostic score (NOT APACHE II / SOFA / etc.) and
+# carries no mortality/outcome prediction. Always labelled as such in the output.
+ATTENTION_INDEX_LABEL = (
+    "Rule-based Clinical Attention Index (0-10) - heuristic, non-prognostic; "
+    "NOT a validated clinical score"
+)
+
+# --------------------------------------------------------------------------- #
+#  Safety / positioning
+# --------------------------------------------------------------------------- #
+SAFETY_NOTE = (
+    "This tool is a clinical decision SUPPORT aid for use BY a qualified "
+    "respiratory therapist / physician. It does not replace clinical judgment, "
+    "and must not be used as a standalone diagnostic or treatment decision tool. "
+    "Clinical correlation and professional review are required."
+)
+SAFETY_NOTE_AR = (
+    "هذه الأداة وسيلة مساندة للقرار السريري يستخدمها الأخصائي المؤهل — "
+    "لا تحل محل الحكم السريري، ولا تُستخدم كأداة تشخيص أو علاج مستقلة. "
+    "يلزم الربط السريري والمراجعة المهنية."
+)
+
+
+======================================================
+  FILE: validation.py
+  CritiCore-CDSS v1.0.0 — Author: Fahad Aloufi
+======================================================
+
+"""
+validation.py
+=============
+Physiological input validation for the ABG CDSS.
+
+Project : CritiCore-CDSS
+Author  : Fahad Aloufi (Head of Respiratory Therapy)
+
+Two levels of checking:
+  1. HARD limits  -> value is physiologically impossible / a data-entry error.
+                     analyze() will refuse to interpret and returns an error.
+  2. PLAUSIBLE band-> value is possible but unusual; a warning is attached but
+                     interpretation proceeds.
+
+This is a safety-critical layer: in a medical tool, silently interpreting
+pH = 8.5 or FiO2 = 500 is worse than refusing.
+"""
+
+from constants import VALIDATION_RANGES
+
+
+class ValidationError(ValueError):
+    """Raised when an input is physiologically impossible."""
+
+
+def validate_value(name: str, value, required: bool = True):
+    """
+    Validate a single numeric input against its physiological range.
+
+    Returns a list of warning strings (empty if none).
+    Raises ValidationError if the value is outside hard physiological limits.
+    """
+    warnings = []
+
+    if value is None:
+        if required:
+            raise ValidationError(f"'{name}' is required but was not provided.")
+        return warnings
+
+    # numeric coercion
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        raise ValidationError(f"'{name}' must be a number (got: {value!r}).")
+
+    ranges = VALIDATION_RANGES.get(name)
+    if ranges is None:
+        return warnings  # no range defined -> skip
+
+    hard_min, hard_max = ranges["hard"]
+    if value < hard_min or value > hard_max:
+        raise ValidationError(
+            f"'{name}' = {value} is outside the physiologically possible range "
+            f"({hard_min}-{hard_max}). Please re-check the entry."
+        )
+
+    plaus_min, plaus_max = ranges["plausible"]
+    if value < plaus_min or value > plaus_max:
+        warnings.append(
+            f"'{name}' = {value} is unusual (expected {plaus_min}-{plaus_max}); "
+            f"verify the value."
+        )
+
+    return warnings
+
+
+def validate_fio2_scale(fio2):
+    """
+    Catch the classic 0.5 vs 50 FiO2 error.
+    FiO2 should be a PERCENT (21-100). If a fraction (0.21-1.0) sneaks in,
+    the P/F ratio would be off by 100x.
+    """
+    if fio2 is None:
+        return None, []
+    fio2 = float(fio2)
+    warnings = []
+    if 0.0 < fio2 <= 1.0:
+        warnings.append(
+            f"FiO2 = {fio2} looks like a fraction. Interpreting as "
+            f"{fio2 * 100:.0f}%. Enter FiO2 as a percent (e.g. 50 for 50%)."
+        )
+        fio2 = fio2 * 100
+    return fio2, warnings
+
+
+def validate_abg_inputs(
+    ph, pco2, hco3, po2, na=None, cl=None,
+    on_vent="no", fio2=None, peep=None, rr=None, tv=None,
+    albumin=None, height_cm=None,
+):
+    """
+    Validate the full input set. Returns (cleaned_values_dict, warnings_list).
+    Raises ValidationError on any hard-limit violation.
+    """
+    warnings = []
+
+    warnings += validate_value("ph", ph)
+    warnings += validate_value("pco2", pco2)
+    warnings += validate_value("hco3", hco3)
+    warnings += validate_value("po2", po2)
+
+    # Na / Cl now mandatory for a complete (anion-gap-capable) interpretation
+    warnings += validate_value("na", na)
+    warnings += validate_value("cl", cl)
+
+    # optional albumin (for corrected AG)
+    warnings += validate_value("albumin", albumin, required=False)
+
+    cleaned_fio2 = None
+    if str(on_vent).strip().lower() == "yes":
+        cleaned_fio2, fio2_warn = validate_fio2_scale(fio2)
+        warnings += fio2_warn
+        warnings += validate_value("fio2", cleaned_fio2)
+        warnings += validate_value("peep", peep, required=False)
+        warnings += validate_value("rr", rr, required=False)
+        warnings += validate_value("tv", tv, required=False)
+
+    warnings += validate_value("height_cm", height_cm, required=False)
+
+    # internal consistency check: Henderson-Hasselbalch sanity
+    # pH, PaCO2, HCO3 should be roughly consistent. Large mismatch -> lab error.
+    consistency_warn = _check_henderson_hasselbalch(ph, pco2, hco3)
+    if consistency_warn:
+        warnings.append(consistency_warn)
+
+    cleaned = {
+        "ph": float(ph), "pco2": float(pco2), "hco3": float(hco3),
+        "po2": float(po2),
+        "na": float(na) if na is not None else None,
+        "cl": float(cl) if cl is not None else None,
+        "fio2": cleaned_fio2,
+        "peep": float(peep) if peep is not None else None,
+        "rr": float(rr) if rr is not None else None,
+        "tv": float(tv) if tv is not None else None,
+        "albumin": float(albumin) if albumin is not None else None,
+        "height_cm": float(height_cm) if height_cm is not None else None,
+    }
+    return cleaned, warnings
+
+
+def _check_henderson_hasselbalch(ph, pco2, hco3, tolerance=0.10):
+    """
+    Verify the reported pH is consistent with PaCO2 and HCO3.
+    pH = 6.1 + log10(HCO3 / (0.03 * PaCO2))
+    If the calculated pH differs from the reported pH by more than `tolerance`,
+    the sample is internally inconsistent (likely a lab/data-entry error).
+    """
+    import math
+    try:
+        calc_ph = 6.1 + math.log10(float(hco3) / (0.03 * float(pco2)))
+    except (ValueError, ZeroDivisionError):
+        return None
+    diff = abs(calc_ph - float(ph))
+    if diff > tolerance:
+        return (
+            f"Internal inconsistency: reported pH ({ph}) does not match the pH "
+            f"calculated from PaCO2 and HCO3 ({calc_ph:.2f}) via Henderson-"
+            f"Hasselbalch (difference {diff:.2f}). Possible lab or data-entry "
+            f"error - verify the sample before acting on the interpretation."
+        )
+    return None
+
+
+======================================================
+  FILE: abg_engine.py
+  CritiCore-CDSS v1.0.0 — Author: Fahad Aloufi
+======================================================
+
+"""
+abg_engine.py
+=============
+Core clinical engine for the ABG Clinical Decision Support tool.
+
+Project : CritiCore-CDSS
+Author  : Fahad Aloufi (Head of Respiratory Therapy)
+Status  : Clinical logic implementation - NOT yet clinically validated for deployment.
+
+Design principles:
+  * Pure function `analyze_abg(...)` -> returns a structured dict. No input()/print()
+    inside the engine, so it can be imported by a CLI, a web API, or unit tests.
+  * Every clinical rule is traceable to `constants.py`.
+  * Safety first: validation runs before any interpretation.
+
+Clinical coverage (v1.0):
+  1. Acid-base status & primary disorder
+  2. Anion gap (+ albumin correction) and HAGMA/NAGMA classification
+  3. Delta ratio (delta-delta) for triple/mixed disorders
+  4. Full compensation checks for ALL four primary disorders
+     (Winter's, metabolic-alkalosis, acute/chronic respiratory)
+  5. Oxygenation: PaO2 (spontaneous) and P/F ratio (ventilated)
+  6. Berlin-style ARDS staging (PEEP>=5 gated) with explicit limitations
+  7. IBW (Devine) + lung-protective tidal-volume check
+  8. RSBI weaning index
+  9. Rule-based clinical attention index + priority triage (heuristic, non-prognostic)
+ 10. Context-aware ventilator suggestions (ARDS / COPD / general)
+
+This is a rule-based system (NOT AI) intended for use BY a clinician.
+"""
+
+from typing import Optional
+import constants as C
+from validation import validate_abg_inputs, ValidationError
+
+
+# --------------------------------------------------------------------------- #
+#  Small clinical helpers
+# --------------------------------------------------------------------------- #
+def _anion_gap(na: float, cl: float, hco3: float) -> float:
+    return round(na - (cl + hco3), 1)
+
+
+def _corrected_anion_gap(ag: float, albumin: Optional[float]) -> Optional[float]:
+    """Albumin-corrected AG: hypoalbuminaemia masks a raised gap."""
+    if albumin is None:
+        return None
+    correction = C.ALBUMIN_CORRECTION_FACTOR * (C.ALBUMIN_NORMAL - albumin)
+    return round(ag + correction, 1)
+
+
+def _delta_ratio(ag: float, hco3: float) -> Optional[float]:
+    """(AG - 12) / (24 - HCO3). Undefined when HCO3 ~ 24."""
+    denom = C.HCO3_NORMAL - hco3
+    if abs(denom) < 0.5:
+        return None
+    return round((ag - C.ANION_GAP_REFERENCE) / denom, 2)
+
+
+def _ideal_body_weight(height_cm: float, sex: str) -> Optional[float]:
+    """Devine formula (metric)."""
+    if height_cm is None:
+        return None
+    base = C.IBW_MALE_BASE if sex.strip().lower().startswith("m") else C.IBW_FEMALE_BASE
+    ibw = base + C.IBW_HEIGHT_COEFF * (height_cm - C.IBW_REFERENCE_HEIGHT_CM)
+    return round(max(ibw, 0), 1)
+
+
+# --------------------------------------------------------------------------- #
+#  Main engine
+# --------------------------------------------------------------------------- #
+def analyze_abg(
+    sample_type: str,
+    clinical_context: str,
+    ph: float,
+    pco2: float,
+    hco3: float,
+    po2: float,
+    na: float,
+    cl: float,
+    on_vent: str = "no",
+    mode: str = "",
+    rr=None,
+    tv=None,
+    peep=None,
+    fio2=None,
+    albumin: Optional[float] = None,
+    height_cm: Optional[float] = None,
+    sex: str = "male",
+    resp_chronicity: str = "unknown",   # "acute" | "chronic" | "unknown"
+) -> dict:
+    """
+    Interpret an arterial/venous/capillary blood gas with clinical context.
+
+    Returns a structured results dict. If a hard validation error occurs, the
+    dict has {"error": <message>, "valid": False} and no interpretation.
+    """
+    # ---- 0. Validation (safety gate) -------------------------------------- #
+    try:
+        cleaned, warnings = validate_abg_inputs(
+            ph=ph, pco2=pco2, hco3=hco3, po2=po2, na=na, cl=cl,
+            on_vent=on_vent, fio2=fio2, peep=peep, rr=rr, tv=tv,
+            albumin=albumin, height_cm=height_cm,
+        )
+    except ValidationError as exc:
+        return {"valid": False, "error": str(exc),
+                "safety_note": C.SAFETY_NOTE, "safety_note_ar": C.SAFETY_NOTE_AR}
+
+    ph = cleaned["ph"]; pco2 = cleaned["pco2"]; hco3 = cleaned["hco3"]
+    po2 = cleaned["po2"]; na = cleaned["na"]; cl = cleaned["cl"]
+    fio2 = cleaned["fio2"]; peep = cleaned["peep"]
+    rr = cleaned["rr"]; tv = cleaned["tv"]
+    albumin = cleaned["albumin"]; height_cm = cleaned["height_cm"]
+
+    sample_type = str(sample_type).strip().upper()
+    clinical_context = str(clinical_context).strip().upper()
+    on_vent = str(on_vent).strip().lower()
+
+    r = {
+        "valid": True,
+        "warnings": warnings,
+        "acid_base_status": "",
+        "primary_disorder": "",
+        "compensation": "",
+        "compensation_status": "",
+        "secondary_disorder": "",
+        "final_interpretation": "",
+        "anion_gap": None,
+        "anion_gap_corrected": None,
+        "anion_gap_interpretation": "",
+        "delta_ratio": None,
+        "delta_ratio_interpretation": "",
+        "oxygenation_note": "",
+        "pf_ratio": None,
+        "oxygenation_status": "",
+        "ventilator_status": "",
+        "ventilator_settings": {},
+        "ibw_kg": None,
+        "tv_per_kg": None,
+        "lung_protective": "",
+        "rsbi": None,
+        "rsbi_interpretation": "",
+        "context_interpretation": "",
+        "context_notes": [],
+        "ventilator_suggestions": [],
+        "risk_flag": "",
+        "attention_index": 0,
+        "attention_index_label": C.ATTENTION_INDEX_LABEL,
+        "priority_level": "",
+        "clinical_flags": [],
+        "clinical_considerations": [],
+        "safety_note": C.SAFETY_NOTE,
+        "safety_note_ar": C.SAFETY_NOTE_AR,
+    }
+
+    # ---- 1. Acid-base status --------------------------------------------- #
+    if ph < C.PH_LOW:
+        r["acid_base_status"] = "Acidemia"
+    elif ph > C.PH_HIGH:
+        r["acid_base_status"] = "Alkalemia"
+    else:
+        r["acid_base_status"] = "Normal pH (compensated or mixed possible)"
+
+    # ---- 2. Primary disorder --------------------------------------------- #
+    if ph < C.PH_LOW:
+        if pco2 > C.PACO2_HIGH and hco3 < C.HCO3_LOW:
+            r["primary_disorder"] = "Mixed Acidosis (Respiratory + Metabolic)"
+        elif pco2 > C.PACO2_HIGH:
+            r["primary_disorder"] = "Respiratory Acidosis"
+        elif hco3 < C.HCO3_LOW:
+            r["primary_disorder"] = "Metabolic Acidosis"
+        else:
+            r["primary_disorder"] = "Acidemia - pattern unclear (review)"
+    elif ph > C.PH_HIGH:
+        if pco2 < C.PACO2_LOW and hco3 > C.HCO3_HIGH:
+            r["primary_disorder"] = "Mixed Alkalosis (Respiratory + Metabolic)"
+        elif pco2 < C.PACO2_LOW:
+            r["primary_disorder"] = "Respiratory Alkalosis"
+        elif hco3 > C.HCO3_HIGH:
+            r["primary_disorder"] = "Metabolic Alkalosis"
+        else:
+            r["primary_disorder"] = "Alkalemia - pattern unclear (review)"
+    else:
+        # normal pH but possibly deranged CO2/HCO3
+        if pco2 > C.PACO2_HIGH or pco2 < C.PACO2_LOW or hco3 > C.HCO3_HIGH or hco3 < C.HCO3_LOW:
+            r["primary_disorder"] = "Normal pH with abnormal CO2/HCO3 - fully compensated or mixed disorder"
+        else:
+            r["primary_disorder"] = "Normal acid-base status"
+
+    # ---- 3. Anion gap ---------------------------------------------------- #
+    ag = _anion_gap(na, cl, hco3)
+    r["anion_gap"] = ag
+    ag_corr = _corrected_anion_gap(ag, albumin)
+    r["anion_gap_corrected"] = ag_corr
+
+    effective_ag = ag_corr if ag_corr is not None else ag
+    if effective_ag > C.ANION_GAP_NORMAL_HIGH:
+        r["anion_gap_interpretation"] = (
+            f"High anion gap ({effective_ag}) - suggests HAGMA "
+            f"(e.g. lactate, ketones, toxins, uraemia)"
+        )
+    elif effective_ag < C.ANION_GAP_NORMAL_LOW:
+        r["anion_gap_interpretation"] = (
+            f"Low anion gap ({effective_ag}) - consider hypoalbuminaemia, "
+            f"paraproteinaemia, or lab artefact"
+        )
+    else:
+        r["anion_gap_interpretation"] = f"Normal anion gap ({effective_ag})"
+
+    # ---- 4. Delta ratio (only meaningful with a metabolic acidosis) ------ #
+    is_met_acidosis = "Metabolic Acidosis" in r["primary_disorder"] or \
+                      "Mixed Acidosis" in r["primary_disorder"]
+    if is_met_acidosis and effective_ag > C.ANION_GAP_NORMAL_HIGH:
+        dr = _delta_ratio(effective_ag, hco3)
+        r["delta_ratio"] = dr
+        if dr is not None:
+            if dr < C.DELTA_RATIO_NAGMA_MAX:
+                r["delta_ratio_interpretation"] = "Delta ratio < 0.4: concurrent normal-AG metabolic acidosis (NAGMA)"
+            elif dr < C.DELTA_RATIO_MIXED_MAX:
+                r["delta_ratio_interpretation"] = "Delta ratio 0.4-1: mixed HAGMA + NAGMA"
+            elif dr <= C.DELTA_RATIO_PURE_MAX:
+                r["delta_ratio_interpretation"] = "Delta ratio 1-2: pure high-AG metabolic acidosis"
+            else:
+                r["delta_ratio_interpretation"] = "Delta ratio > 2: coexisting metabolic alkalosis or chronic respiratory acidosis"
+
+    # ---- 5. Compensation (ALL four disorders) ---------------------------- #
+    _assess_compensation(r, ph, pco2, hco3, resp_chronicity)
+
+    # ---- 6. Oxygenation -------------------------------------------------- #
+    if on_vent != "yes":
+        if sample_type == "ABG":
+            if po2 < C.PAO2_SEVERE_HYPOXEMIA:
+                r["oxygenation_note"] = "Severe hypoxemia"
+            elif po2 < C.PAO2_MILD_HYPOXEMIA:
+                r["oxygenation_note"] = "Mild to moderate hypoxemia"
+            elif po2 <= C.PAO2_NORMAL_UPPER:
+                r["oxygenation_note"] = "PaO2 within normal range"
+            else:
+                r["oxygenation_note"] = "PaO2 above normal range (supplemental O2?)"
+        elif sample_type == "VBG":
+            r["oxygenation_note"] = "Oxygenation cannot be reliably assessed from VBG"
+        elif sample_type == "CBG":
+            r["oxygenation_note"] = "Oxygenation assessment from CBG is limited; ABG preferred"
+        else:
+            r["oxygenation_note"] = "Unknown sample type - oxygenation limited"
+        r["oxygenation_status"] = r["oxygenation_note"]
+
+    # P/F ratio (ventilated)
+    if on_vent == "yes" and fio2 and fio2 > 0:
+        pf = round(po2 / (fio2 / 100.0), 1)
+        r["pf_ratio"] = pf
+        if pf >= C.PF_NORMAL:
+            r["oxygenation_status"] = "No significant impairment"
+        elif pf >= C.PF_MILD:
+            r["oxygenation_status"] = "Mild oxygenation impairment"
+        elif pf >= C.PF_MODERATE:
+            r["oxygenation_status"] = "Moderate oxygenation impairment"
+        else:
+            r["oxygenation_status"] = "Severe oxygenation impairment"
+
+    # ---- 7. Ventilator settings + IBW + lung-protective check ------------ #
+    if on_vent == "yes":
+        r["ventilator_status"] = "On mechanical ventilation"
+        r["ventilator_settings"] = {
+            "Mode": mode, "RR": rr, "TV": tv, "PEEP": peep, "FiO2": fio2
+        }
+        ibw = _ideal_body_weight(height_cm, sex)
+        r["ibw_kg"] = ibw
+        if ibw and tv:
+            tv_per_kg = round(tv / ibw, 1)
+            r["tv_per_kg"] = tv_per_kg
+            if tv_per_kg <= C.LUNG_PROTECTIVE_TV_HIGH:
+                r["lung_protective"] = f"Lung-protective ({tv_per_kg} mL/kg IBW)"
+            elif tv_per_kg <= C.LUNG_PROTECTIVE_TV_CEILING:
+                r["lung_protective"] = f"Borderline ({tv_per_kg} mL/kg IBW) - aim 4-6 mL/kg"
+            else:
+                r["lung_protective"] = f"NOT lung-protective ({tv_per_kg} mL/kg IBW) - reduce TV"
+        # RSBI
+        if rr and tv:
+            rsbi = round(rr / (tv / 1000.0), 1)
+            r["rsbi"] = rsbi
+            if rsbi > C.RSBI_FAILURE_THRESHOLD:
+                r["rsbi_interpretation"] = f"RSBI {rsbi} > 105: weaning failure likely"
+            else:
+                r["rsbi_interpretation"] = f"RSBI {rsbi} <= 105: weaning may be favourable (clinical correlation required)"
+    else:
+        r["ventilator_status"] = "Not on mechanical ventilation"
+
+    # ---- 8. Clinical context --------------------------------------------- #
+    _assess_context(r, clinical_context, on_vent, peep)
+
+    # ---- 9. Ventilator suggestions --------------------------------------- #
+    _build_suggestions(r, clinical_context, on_vent)
+
+    # ---- 10. Risk flag --------------------------------------------------- #
+    _assess_risk(r, ph, po2, sample_type, on_vent)
+
+    # ---- 11. Attention index + priority + flags + clinical considerations - #
+    _assess_severity(r, ph, clinical_context, on_vent)
+
+    return r
+
+
+# --------------------------------------------------------------------------- #
+#  Compensation engine (all four primary disorders)
+# --------------------------------------------------------------------------- #
+def _assess_compensation(r, ph, pco2, hco3, resp_chronicity):
+    pd = r["primary_disorder"]
+
+    if "Metabolic Acidosis" in pd and "Mixed" not in pd:
+        expected = C.WINTERS_SLOPE * hco3 + C.WINTERS_INTERCEPT
+        lo, hi = expected - C.WINTERS_TOLERANCE, expected + C.WINTERS_TOLERANCE
+        r["compensation"] = f"Winter's expected PaCO2: {round(expected,1)} (range {round(lo,1)}-{round(hi,1)})"
+        if pco2 < lo:
+            r["secondary_disorder"] = "Respiratory Alkalosis"
+            r["compensation_status"] = "PaCO2 lower than expected -> superimposed respiratory alkalosis"
+            r["final_interpretation"] = "Metabolic Acidosis + Respiratory Alkalosis"
+        elif pco2 > hi:
+            r["secondary_disorder"] = "Respiratory Acidosis"
+            r["compensation_status"] = "PaCO2 higher than expected -> superimposed respiratory acidosis"
+            r["final_interpretation"] = "Metabolic Acidosis + Respiratory Acidosis"
+        else:
+            r["compensation_status"] = "Appropriate respiratory compensation"
+            r["final_interpretation"] = "Metabolic Acidosis (appropriately compensated)"
+
+    elif pd == "Metabolic Alkalosis":
+        expected = C.MET_ALK_SLOPE * hco3 + C.MET_ALK_INTERCEPT
+        lo, hi = expected - C.MET_ALK_TOLERANCE, expected + C.MET_ALK_TOLERANCE
+        r["compensation"] = f"Expected PaCO2: {round(expected,1)} (range {round(lo,1)}-{round(hi,1)})"
+        if pco2 < lo:
+            r["secondary_disorder"] = "Respiratory Alkalosis"
+            r["compensation_status"] = "PaCO2 lower than expected -> superimposed respiratory alkalosis"
+            r["final_interpretation"] = "Metabolic Alkalosis + Respiratory Alkalosis"
+        elif pco2 > hi:
+            r["secondary_disorder"] = "Respiratory Acidosis"
+            r["compensation_status"] = "PaCO2 higher than expected -> superimposed respiratory acidosis"
+            r["final_interpretation"] = "Metabolic Alkalosis + Respiratory Acidosis"
+        else:
+            r["compensation_status"] = "Appropriate respiratory compensation"
+            r["final_interpretation"] = "Metabolic Alkalosis (appropriately compensated)"
+
+    elif pd == "Respiratory Acidosis":
+        delta_co2 = pco2 - C.PACO2_NORMAL
+        exp_acute = C.HCO3_NORMAL + C.HCO3_PER_10_ACUTE_RESP_ACIDOSIS * (delta_co2 / 10.0)
+        exp_chronic = C.HCO3_NORMAL + C.HCO3_PER_10_CHRONIC_RESP_ACIDOSIS * (delta_co2 / 10.0)
+        r["compensation"] = (
+            f"Expected HCO3: acute ~{round(exp_acute,1)}, chronic ~{round(exp_chronic,1)}"
+        )
+        r["compensation_status"], r["final_interpretation"] = _resp_compensation_verdict(
+            hco3, exp_acute, exp_chronic, "Respiratory Acidosis", raised=True)
+
+    elif pd == "Respiratory Alkalosis":
+        delta_co2 = C.PACO2_NORMAL - pco2
+        exp_acute = C.HCO3_NORMAL - C.HCO3_PER_10_ACUTE_RESP_ALKALOSIS * (delta_co2 / 10.0)
+        exp_chronic = C.HCO3_NORMAL - C.HCO3_PER_10_CHRONIC_RESP_ALKALOSIS * (delta_co2 / 10.0)
+        r["compensation"] = (
+            f"Expected HCO3: acute ~{round(exp_acute,1)}, chronic ~{round(exp_chronic,1)}"
+        )
+        r["compensation_status"], r["final_interpretation"] = _resp_compensation_verdict(
+            hco3, exp_acute, exp_chronic, "Respiratory Alkalosis", raised=False)
+
+    else:
+        r["final_interpretation"] = pd
+
+
+def _resp_compensation_verdict(hco3, exp_acute, exp_chronic, label, raised, tol=2.0):
+    """
+    Decide whether a respiratory disorder is acute, chronic, partially
+    compensated, or has a superimposed metabolic process.
+    """
+    if abs(hco3 - exp_acute) <= tol:
+        return "Consistent with an ACUTE process (minimal renal compensation)", f"Acute {label}"
+    if abs(hco3 - exp_chronic) <= tol:
+        return "Consistent with a CHRONIC process (renal compensation present)", f"Chronic {label}"
+    if exp_acute < hco3 < exp_chronic or exp_chronic < hco3 < exp_acute:
+        return "Partial compensation (between acute and chronic expected values)", f"{label} (partially compensated)"
+    # HCO3 outside both -> superimposed metabolic disorder
+    if raised:  # respiratory acidosis
+        if hco3 > max(exp_acute, exp_chronic):
+            return "HCO3 above expected -> superimposed metabolic ALKALOSIS", f"{label} + Metabolic Alkalosis"
+        return "HCO3 below expected -> superimposed metabolic ACIDOSIS", f"{label} + Metabolic Acidosis"
+    else:      # respiratory alkalosis
+        if hco3 < min(exp_acute, exp_chronic):
+            return "HCO3 below expected -> superimposed metabolic ACIDOSIS", f"{label} + Metabolic Acidosis"
+        return "HCO3 above expected -> superimposed metabolic ALKALOSIS", f"{label} + Metabolic Alkalosis"
+
+
+# --------------------------------------------------------------------------- #
+#  Clinical context
+# --------------------------------------------------------------------------- #
+def _assess_context(r, clinical_context, on_vent, peep):
+    if clinical_context == "ARDS":
+        pf = r["pf_ratio"]
+        if on_vent == "yes" and peep is not None and peep >= C.ARDS_MIN_PEEP and pf is not None:
+            if pf < C.PF_MODERATE:
+                r["context_interpretation"] = "Severe ARDS (P/F < 100)"
+            elif pf < C.PF_MILD:
+                r["context_interpretation"] = "Moderate ARDS (P/F 100-199)"
+            elif pf < C.PF_NORMAL:
+                r["context_interpretation"] = "Mild ARDS (P/F 200-299)"
+            else:
+                r["context_interpretation"] = "P/F >= 300 does not meet ARDS oxygenation threshold"
+            r["context_notes"].append(
+                "P/F-based staging only. Full Berlin criteria also require acute "
+                "onset, bilateral infiltrates on imaging, and exclusion of a purely "
+                "cardiogenic cause - confirm clinically."
+            )
+        else:
+            r["context_interpretation"] = "ARDS context given, but data insufficient (need ventilation with PEEP>=5 and a valid P/F)"
+        if r["pf_ratio"] is not None and r["pf_ratio"] < C.PF_CRITICAL:
+            r["context_notes"].append("Critical hypoxemia - urgent escalation required")
+
+    elif clinical_context == "COPD":
+        r["context_interpretation"] = "COPD context"
+        r["context_notes"].append("Prioritize pH and PaCO2 trend over absolute HCO3")
+        if "Respiratory Acidosis" in r["primary_disorder"] or r["secondary_disorder"] == "Respiratory Acidosis":
+            r["context_notes"].append("Hypercapnic ventilatory failure pattern present")
+        if "Chronic Respiratory Acidosis" in r["final_interpretation"]:
+            r["context_notes"].append(
+                "Chronic compensated pattern - target the patient's OWN baseline pH/PaCO2, "
+                "not textbook normals (avoid over-correction)."
+            )
+        r["context_notes"].append(
+            "P/F ratio describes oxygenation severity but does not by itself drive COPD decisions."
+        )
+    else:
+        r["context_interpretation"] = "General clinical interpretation"
+
+
+# --------------------------------------------------------------------------- #
+#  Ventilator suggestions
+# --------------------------------------------------------------------------- #
+def _build_suggestions(r, clinical_context, on_vent):
+    if on_vent != "yes":
+        return
+    s = r["ventilator_suggestions"]
+
+    if r["secondary_disorder"]:
+        s.append("Mixed disorder present - treat the underlying cause first; avoid reflexive ventilator changes")
+
+    if clinical_context == "ARDS":
+        s.append("Apply lung-protective ventilation (target 4-6 mL/kg IBW)")
+        s.append("Increase PEEP and optimize FiO2 before increasing minute ventilation")
+        if r["pf_ratio"] is not None and r["pf_ratio"] < C.PF_MODERATE:
+            s.append("Consider prone positioning (P/F < 100)")
+        if r["pf_ratio"] is not None and r["pf_ratio"] < C.PF_CRITICAL:
+            s.append("Consider ECMO referral if refractory hypoxemia")
+    elif clinical_context == "COPD":
+        s.append("Avoid aggressive ventilation increases (risk of dynamic hyperinflation / air trapping)")
+        s.append("Prefer adjusting RR over large VT increases; allow permissive hypercapnia toward baseline")
+    elif "Respiratory Acidosis" in r["primary_disorder"] and not r["secondary_disorder"]:
+        s.append("Increase minute ventilation (raise RR first; adjust VT cautiously)")
+    elif "Respiratory Alkalosis" in r["primary_disorder"] and not r["secondary_disorder"]:
+        s.append("Reduce minute ventilation (lower RR first)")
+    elif r["primary_disorder"] == "Metabolic Acidosis":
+        s.append("Ensure adequate ventilation and address the metabolic cause (do not suppress compensation)")
+    elif r["primary_disorder"] == "Metabolic Alkalosis":
+        s.append("Reduce ventilation cautiously only if clinically indicated")
+
+    if r["lung_protective"].startswith("NOT"):
+        s.append("Current tidal volume exceeds lung-protective range - reduce toward 4-6 mL/kg IBW")
+
+
+# --------------------------------------------------------------------------- #
+#  Risk flag
+# --------------------------------------------------------------------------- #
+def _assess_risk(r, ph, po2, sample_type, on_vent):
+    pf = r["pf_ratio"]
+    if pf is not None and pf < C.PF_CRITICAL:
+        r["risk_flag"] = "Critical - life-threatening hypoxemia"
+    elif ph < C.PH_CRIT_LOW:
+        r["risk_flag"] = "High - severe acidemia"
+    elif ph > C.PH_CRIT_HIGH:
+        r["risk_flag"] = "High - severe alkalemia"
+    elif sample_type == "ABG" and po2 < C.PAO2_SEVERE_HYPOXEMIA and on_vent != "yes":
+        r["risk_flag"] = "High - severe hypoxemia"
+    elif "mixed" in r["primary_disorder"].lower() or r["secondary_disorder"]:
+        r["risk_flag"] = "Moderate to High - mixed disorder"
+    elif on_vent == "yes":
+        r["risk_flag"] = "Moderate - ventilated patient requires close monitoring"
+    else:
+        r["risk_flag"] = "Moderate/Low - clinical correlation required"
+
+
+# --------------------------------------------------------------------------- #
+#  Clinical attention index / priority / flags / clinical considerations
+# --------------------------------------------------------------------------- #
+def _assess_severity(r, ph, clinical_context, on_vent):
+    pf = r["pf_ratio"]
+    if pf is not None:
+        if pf < C.PF_MODERATE:
+            r["attention_index"] = 10
+        elif pf < C.PF_MILD:
+            r["attention_index"] = 8
+        elif pf < C.PF_NORMAL:
+            r["attention_index"] = 5
+        else:
+            r["attention_index"] = 2
+    else:
+        if ph < C.PH_CRIT_LOW or ph > C.PH_CRIT_HIGH:
+            r["attention_index"] = 7
+        elif ph < 7.30 or ph > 7.50:
+            r["attention_index"] = 5
+        else:
+            r["attention_index"] = 2
+
+    s = r["attention_index"]
+    if s >= 9:
+        r["priority_level"] = "IMMEDIATE ICU ACTION"
+    elif s >= 7:
+        r["priority_level"] = "URGENT REVIEW"
+    elif s >= 4:
+        r["priority_level"] = "MODERATE"
+    else:
+        r["priority_level"] = "STABLE"
+
+    if clinical_context == "ARDS":
+        r["clinical_flags"].append("ARDS")
+    if pf is not None and pf < C.PF_MODERATE:
+        r["clinical_flags"].append("Critical Hypoxemia")
+    if on_vent == "yes":
+        r["clinical_flags"].append("Ventilated Patient")
+    if r["secondary_disorder"]:
+        r["clinical_flags"].append("Mixed Disorder")
+
+    if r["priority_level"] == "IMMEDIATE ICU ACTION":
+        r["clinical_considerations"] += [
+            "Increase PEEP (stepwise, titrated strategy)",
+            "Optimize FiO2 to target SpO2 88-95%",
+            "Apply lung-protective ventilation (4-6 mL/kg IBW)",
+            "Consider prone positioning",
+            "Evaluate for ECMO referral if refractory hypoxemia",
+        ]
+    if "Respiratory Acidosis" in r["primary_disorder"] and not r["secondary_disorder"]:
+        r["clinical_considerations"].append("Increase minute ventilation (raise RR carefully)")
+
+
+======================================================
+  FILE: cli.py
+  CritiCore-CDSS v1.0.0 — Author: Fahad Aloufi
+======================================================
+
+"""
+cli.py
+======
+Interactive command-line front-end for the ABG CDSS.
+
+Project : CritiCore-CDSS
+Author  : Fahad Aloufi (Head of Respiratory Therapy)
+
+Separated from the engine so that the same clinical logic can also power a
+web API or GUI later. All user I/O and error handling live here.
+
+Run:  python cli.py
+"""
+
+from abg_engine import analyze_abg
+import constants as C
+
+
+# --------------------------------------------------------------------------- #
+#  Robust input helpers (no crash on bad entry)
+# --------------------------------------------------------------------------- #
+def ask_float(prompt, allow_blank=False):
+    while True:
+        raw = input(prompt).strip()
+        if allow_blank and raw == "":
+            return None
+        try:
+            return float(raw)
+        except ValueError:
+            print("  -> Please enter a number (e.g. 7.35).")
+
+
+def ask_choice(prompt, choices):
+    choices_up = [c.upper() for c in choices]
+    while True:
+        raw = input(prompt).strip().upper()
+        if raw in choices_up:
+            return raw
+        print(f"  -> Please choose one of: {', '.join(choices)}")
+
+
+def ask_yes_no(prompt):
+    while True:
+        raw = input(prompt).strip().lower()
+        if raw in ("yes", "y"):
+            return "yes"
+        if raw in ("no", "n"):
+            return "no"
+        print("  -> Please answer yes or no.")
+
+
+# --------------------------------------------------------------------------- #
+#  Output formatter
+# --------------------------------------------------------------------------- #
+def print_results(r):
+    if not r.get("valid", False):
+        print("\n" + "!" * 60)
+        print("  INPUT ERROR - interpretation not performed")
+        print("  " + r.get("error", "unknown error"))
+        print("!" * 60)
+        print("\n" + r.get("safety_note", ""))
+        return
+
+    line = "-" * 60
+    print("\n" + line)
+    print("  ABG CLINICAL DECISION SUPPORT - RESULT")
+    print(line)
+
+    if r["warnings"]:
+        print("\n  WARNINGS:")
+        for w in r["warnings"]:
+            print(f"   ! {w}")
+
+    print("\n  ACID-BASE")
+    print(f"   Status              : {r['acid_base_status']}")
+    print(f"   Primary disorder    : {r['primary_disorder']}")
+    if r["compensation"]:
+        print(f"   Compensation        : {r['compensation']}")
+    if r["compensation_status"]:
+        print(f"   Compensation status : {r['compensation_status']}")
+    if r["secondary_disorder"]:
+        print(f"   Secondary disorder  : {r['secondary_disorder']}")
+    print(f"   Final interpretation: {r['final_interpretation']}")
+
+    print("\n  ANION GAP")
+    print(f"   Anion gap           : {r['anion_gap']}")
+    if r["anion_gap_corrected"] is not None:
+        print(f"   Albumin-corrected AG: {r['anion_gap_corrected']}")
+    print(f"   Interpretation      : {r['anion_gap_interpretation']}")
+    if r["delta_ratio"] is not None:
+        print(f"   Delta ratio         : {r['delta_ratio']}  ({r['delta_ratio_interpretation']})")
+
+    print("\n  OXYGENATION")
+    if r["pf_ratio"] is not None:
+        print(f"   P/F ratio           : {r['pf_ratio']}")
+    print(f"   Status              : {r['oxygenation_status']}")
+
+    if r["ventilator_status"] == "On mechanical ventilation":
+        print("\n  VENTILATION")
+        for k, v in r["ventilator_settings"].items():
+            print(f"   {k:<20}: {v}")
+        if r["ibw_kg"] is not None:
+            print(f"   IBW (kg)            : {r['ibw_kg']}")
+        if r["tv_per_kg"] is not None:
+            print(f"   TV per kg IBW       : {r['tv_per_kg']}  ({r['lung_protective']})")
+        if r["rsbi"] is not None:
+            print(f"   RSBI                : {r['rsbi']}  ({r['rsbi_interpretation']})")
+
+    print("\n  CLINICAL CONTEXT")
+    print(f"   {r['context_interpretation']}")
+    for note in r["context_notes"]:
+        print(f"   - {note}")
+
+    if r["ventilator_suggestions"]:
+        print("\n  VENTILATOR SUGGESTIONS")
+        for s in r["ventilator_suggestions"]:
+            print(f"   - {s}")
+
+    print("\n  TRIAGE")
+    print(f"   Risk flag           : {r['risk_flag']}")
+    print(f"   Clinical attention  : {r['attention_index']}/10  ({r['attention_index_label']})")
+    print(f"   Priority level      : {r['priority_level']}")
+    if r["clinical_flags"]:
+        print(f"   Clinical flags      : {', '.join(r['clinical_flags'])}")
+
+    if r["clinical_considerations"]:
+        print("\n  CLINICAL CONSIDERATIONS (for clinician review - not directives)")
+        for a in r["clinical_considerations"]:
+            print(f"   - {a}")
+
+    print("\n" + line)
+    print("  SAFETY: " + r["safety_note"])
+    print(line)
+
+
+# --------------------------------------------------------------------------- #
+#  Main
+# --------------------------------------------------------------------------- #
+def main():
+    print("=" * 60)
+    print("  ABG Clinical Decision Support Tool  (v1.0)")
+    print("  A support aid for use BY a qualified clinician.")
+    print("=" * 60)
+
+    sample_type = ask_choice("Sample type (ABG/VBG/CBG): ", ["ABG", "VBG", "CBG"])
+    clinical_context = ask_choice("Clinical context (ARDS/COPD/OTHER): ",
+                                  ["ARDS", "COPD", "OTHER"])
+
+    ph = ask_float("pH: ")
+    pco2 = ask_float("PaCO2 (mmHg): ")
+    hco3 = ask_float("HCO3 (mEq/L): ")
+    po2 = ask_float("pO2 (mmHg): ")
+    na = ask_float("Na (mEq/L): ")
+    cl = ask_float("Cl (mEq/L): ")
+    albumin = ask_float("Albumin (g/dL) [optional, Enter to skip]: ", allow_blank=True)
+
+    on_vent = ask_yes_no("On mechanical ventilation? (yes/no): ")
+    mode = rr = tv = ""
+    peep = fio2 = height_cm = None
+    sex = "male"
+
+    if on_vent == "yes":
+        mode = input("Ventilator mode: ").strip()
+        rr = ask_float("RR (breaths/min): ", allow_blank=True)
+        tv = ask_float("Tidal volume (mL): ", allow_blank=True)
+        peep = ask_float("PEEP (cmH2O): ", allow_blank=True)
+        fio2 = ask_float("FiO2 (%): ")
+        height_cm = ask_float("Height (cm) [for IBW, optional]: ", allow_blank=True)
+        if height_cm is not None:
+            sex = ask_choice("Sex (M/F): ", ["M", "F"])
+
+    results = analyze_abg(
+        sample_type=sample_type, clinical_context=clinical_context,
+        ph=ph, pco2=pco2, hco3=hco3, po2=po2, na=na, cl=cl,
+        on_vent=on_vent, mode=mode, rr=rr, tv=tv, peep=peep, fio2=fio2,
+        albumin=albumin, height_cm=height_cm, sex=sex,
+    )
+    print_results(results)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (KeyboardInterrupt, EOFError):
+        print("\nCancelled.")
+
+
+======================================================
+  FILE: tests/test_engine.py
+  CritiCore-CDSS v1.0.0 — Author: Fahad Aloufi
+======================================================
+
+"""
+test_engine.py
+==============
+Clinical validation test suite for the ABG engine.
+
+Each test is a recognised acid-base teaching case with a known answer.
+Run with:  python -m pytest tests/  (or)  python tests/test_engine.py
+"""
+
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from abg_engine import analyze_abg
+from validation import ValidationError
+
+
+# --------------------------------------------------------------------------- #
+#  Helper
+# --------------------------------------------------------------------------- #
+def run(**kw):
+    base = dict(sample_type="ABG", clinical_context="OTHER",
+                na=140, cl=104, on_vent="no")
+    base.update(kw)
+    return analyze_abg(**base)
+
+
+PASS, FAIL = 0, 0
+def check(desc, condition):
+    global PASS, FAIL
+    if condition:
+        PASS += 1
+        print(f"  PASS  {desc}")
+    else:
+        FAIL += 1
+        print(f"  FAIL  {desc}")
+
+
+# --------------------------------------------------------------------------- #
+#  1. Simple acid-base cases
+# --------------------------------------------------------------------------- #
+print("\n[1] Simple acid-base disorders")
+
+# High anion gap metabolic acidosis (DKA-like), appropriately compensated:
+# pH 7.15, CO2 20, HCO3 8, Na 140, Cl 100. Winter's expected = 1.5*8+8 = 20 (18-22).
+r = run(ph=7.15, pco2=20, hco3=8, po2=95, na=140, cl=100)
+check("HAGMA: primary = Metabolic Acidosis", "Metabolic Acidosis" in r["primary_disorder"])
+check("HAGMA: anion gap high", r["anion_gap"] > 12)
+check("HAGMA: Winter's compensation appropriate",
+      "appropriately compensated" in r["final_interpretation"].lower())
+
+# Same numbers but CO2 = 30 (above Winter's range) -> superimposed respiratory acidosis
+r = run(ph=7.05, pco2=30, hco3=8, po2=95, na=140, cl=100)
+check("HAGMA + inadequate resp compensation detected",
+      r["secondary_disorder"] == "Respiratory Acidosis")
+
+# Normal anion gap metabolic acidosis (diarrhoea): pH 7.30, CO2 34, HCO3 16, Na 140, Cl 114
+r = run(ph=7.30, pco2=34, hco3=16, po2=95, na=140, cl=114)
+check("NAGMA: anion gap normal", 8 <= r["anion_gap"] <= 12)
+
+# Respiratory acidosis, acute: pH 7.25, CO2 60, HCO3 26
+r = run(ph=7.25, pco2=60, hco3=26, po2=90)
+check("Acute resp acidosis: primary correct", r["primary_disorder"] == "Respiratory Acidosis")
+check("Acute resp acidosis: labelled acute", "Acute" in r["final_interpretation"])
+
+# Respiratory acidosis, chronic (COPD): pH 7.34, CO2 60, HCO3 31
+r = run(ph=7.34, pco2=60, hco3=31, po2=70, clinical_context="COPD")
+check("Chronic resp acidosis: labelled chronic", "Chronic" in r["final_interpretation"])
+
+# Respiratory alkalosis: pH 7.52, CO2 28, HCO3 22
+r = run(ph=7.52, pco2=28, hco3=22, po2=98)
+check("Resp alkalosis: primary correct", r["primary_disorder"] == "Respiratory Alkalosis")
+
+# Metabolic alkalosis: pH 7.50, CO2 46, HCO3 34
+r = run(ph=7.50, pco2=46, hco3=34, po2=95)
+check("Metabolic alkalosis: primary correct", r["primary_disorder"] == "Metabolic Alkalosis")
+check("Metabolic alkalosis: compensation computed", r["compensation"] != "")
+
+
+# --------------------------------------------------------------------------- #
+#  2. Mixed / triple disorders
+# --------------------------------------------------------------------------- #
+print("\n[2] Mixed disorders (delta ratio & compensation)")
+
+# HAGMA + concurrent metabolic alkalosis: high AG but HCO3 not as low as expected
+# pH 7.40, CO2 40, HCO3 24, Na 140, Cl 90 -> AG = 26 (high) but HCO3 normal -> delta>2
+r = run(ph=7.40, pco2=40, hco3=24, po2=95, na=140, cl=90)
+check("Triple: high anion gap detected", r["anion_gap"] > 20)
+
+# Met acidosis with superimposed resp acidosis (inadequate compensation)
+# pH 7.15, CO2 40 (should be ~23 by Winter's), HCO3 15
+r = run(ph=7.15, pco2=40, hco3=15, po2=95, na=140, cl=110)
+check("Met acidosis + resp acidosis detected",
+      r["secondary_disorder"] == "Respiratory Acidosis")
+
+
+# --------------------------------------------------------------------------- #
+#  3. Ventilated / ARDS / oxygenation
+# --------------------------------------------------------------------------- #
+print("\n[3] Ventilated patient / ARDS / P-F ratio")
+
+# Severe ARDS: PaO2 60, FiO2 80% -> P/F = 75
+r = run(ph=7.30, pco2=48, hco3=23, po2=60, na=140, cl=104,
+        clinical_context="ARDS", on_vent="yes",
+        mode="PCV", rr=24, tv=400, peep=12, fio2=80,
+        height_cm=170, sex="male")
+check("ARDS: P/F ratio = 75", r["pf_ratio"] == 75.0)
+check("ARDS: staged severe", "Severe ARDS" in r["context_interpretation"])
+check("ARDS: priority IMMEDIATE", r["priority_level"] == "IMMEDIATE ICU ACTION")
+check("ARDS: attention index 10", r["attention_index"] == 10)
+check("ARDS: critical hypoxemia flag", "Critical Hypoxemia" in r["clinical_flags"])
+check("ARDS: IBW computed", r["ibw_kg"] is not None)
+check("ARDS: TV/kg computed", r["tv_per_kg"] is not None)
+check("ARDS: prone position suggested", any("prone" in s.lower() for s in r["ventilator_suggestions"]))
+
+# Lung-protective check: 170cm male IBW ~66kg, TV 400 -> ~6 mL/kg = protective
+check("ARDS: lung-protective label present", r["lung_protective"] != "")
+
+# Non-protective TV: TV 700 on same IBW -> ~10.6 mL/kg
+r2 = run(ph=7.30, pco2=48, hco3=23, po2=60, na=140, cl=104,
+         clinical_context="ARDS", on_vent="yes",
+         mode="VCV", rr=20, tv=700, peep=10, fio2=60, height_cm=170, sex="male")
+check("High TV flagged NOT lung-protective", r2["lung_protective"].startswith("NOT"))
+
+
+# --------------------------------------------------------------------------- #
+#  4. RSBI weaning
+# --------------------------------------------------------------------------- #
+print("\n[4] RSBI weaning index")
+
+# RR 30, TV 300 mL -> RSBI = 30/0.3 = 100 (<105 favourable)
+r = run(ph=7.40, pco2=40, hco3=24, po2=90, na=140, cl=104,
+        on_vent="yes", mode="PSV", rr=30, tv=300, peep=5, fio2=40)
+check("RSBI = 100", r["rsbi"] == 100.0)
+check("RSBI favourable", "favourable" in r["rsbi_interpretation"])
+
+# RR 35, TV 250 -> RSBI = 140 (>105 failure)
+r = run(ph=7.40, pco2=40, hco3=24, po2=90, na=140, cl=104,
+        on_vent="yes", mode="PSV", rr=35, tv=250, peep=5, fio2=40)
+check("RSBI = 140 -> failure likely", r["rsbi"] == 140.0 and "failure" in r["rsbi_interpretation"])
+
+
+# --------------------------------------------------------------------------- #
+#  5. Validation / safety
+# --------------------------------------------------------------------------- #
+print("\n[5] Input validation & safety")
+
+# Impossible pH -> invalid
+r = run(ph=8.5, pco2=40, hco3=24, po2=95)
+check("Impossible pH rejected", r["valid"] is False and "error" in r)
+
+# FiO2 as fraction (0.5) auto-corrected with warning
+r = run(ph=7.40, pco2=40, hco3=24, po2=90, na=140, cl=104,
+        on_vent="yes", mode="VCV", rr=15, tv=450, peep=5, fio2=0.5)
+check("FiO2 fraction auto-scaled to 50", r["valid"] and r["pf_ratio"] == 180.0)
+
+# Henderson-Hasselbalch inconsistency warning
+r = run(ph=7.60, pco2=60, hco3=15, po2=90)  # internally inconsistent
+check("H-H inconsistency warned",
+      any("inconsistency" in w.lower() for w in r.get("warnings", [])))
+
+# Albumin correction: low albumin raises corrected AG
+r = run(ph=7.30, pco2=34, hco3=16, po2=95, na=140, cl=110, albumin=2.0)
+check("Albumin-corrected AG > raw AG", r["anion_gap_corrected"] > r["anion_gap"])
+
+# Safety note always present
+r = run(ph=7.40, pco2=40, hco3=24, po2=95)
+check("Safety note present", r["safety_note"] and r["safety_note_ar"])
+
+
+# --------------------------------------------------------------------------- #
+#  Summary
+# --------------------------------------------------------------------------- #
+print(f"\n{'='*50}")
+print(f"  RESULTS:  {PASS} passed, {FAIL} failed")
+print(f"{'='*50}")
+sys.exit(1 if FAIL else 0)
+
+

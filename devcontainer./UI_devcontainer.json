@@ -1,0 +1,7 @@
+{
+  "name": "ABG CDSS",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "pip install -r requirements-api.txt",
+  "forwardPorts": [8000],
+  "portsAttributes": { "8000": { "label": "ABG Web UI", "onAutoForward": "openPreview" } }
+}
