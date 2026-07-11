@@ -3,6 +3,10 @@ abg_engine.py
 =============
 Core clinical engine for the ABG Clinical Decision Support tool.
 
+Project : CritiCore-CDSS
+Author  : Fahad Aloufi (Head of Respiratory Therapy)
+Status  : Clinical logic implementation - NOT yet clinically validated for deployment.
+
 Design principles:
   * Pure function `analyze_abg(...)` -> returns a structured dict. No input()/print()
     inside the engine, so it can be imported by a CLI, a web API, or unit tests.
@@ -19,7 +23,7 @@ Clinical coverage (v1.0):
   6. Berlin-style ARDS staging (PEEP>=5 gated) with explicit limitations
   7. IBW (Devine) + lung-protective tidal-volume check
   8. RSBI weaning index
-  9. Custom heuristic severity score + priority triage
+  9. Rule-based clinical attention index + priority triage (heuristic, non-prognostic)
  10. Context-aware ventilator suggestions (ARDS / COPD / general)
 
 This is a rule-based system (NOT AI) intended for use BY a clinician.
@@ -140,11 +144,11 @@ def analyze_abg(
         "context_notes": [],
         "ventilator_suggestions": [],
         "risk_flag": "",
-        "severity_score": 0,
-        "severity_label": C.SEVERITY_LABEL,
+        "attention_index": 0,
+        "attention_index_label": C.ATTENTION_INDEX_LABEL,
         "priority_level": "",
         "clinical_flags": [],
-        "action_plan": [],
+        "clinical_considerations": [],
         "safety_note": C.SAFETY_NOTE,
         "safety_note_ar": C.SAFETY_NOTE_AR,
     }
@@ -291,7 +295,7 @@ def analyze_abg(
     # ---- 10. Risk flag --------------------------------------------------- #
     _assess_risk(r, ph, po2, sample_type, on_vent)
 
-    # ---- 11. Severity + priority + flags + action plan ------------------- #
+    # ---- 11. Attention index + priority + flags + clinical considerations - #
     _assess_severity(r, ph, clinical_context, on_vent)
 
     return r
@@ -479,28 +483,28 @@ def _assess_risk(r, ph, po2, sample_type, on_vent):
 
 
 # --------------------------------------------------------------------------- #
-#  Severity / priority / flags / action plan
+#  Clinical attention index / priority / flags / clinical considerations
 # --------------------------------------------------------------------------- #
 def _assess_severity(r, ph, clinical_context, on_vent):
     pf = r["pf_ratio"]
     if pf is not None:
         if pf < C.PF_MODERATE:
-            r["severity_score"] = 10
+            r["attention_index"] = 10
         elif pf < C.PF_MILD:
-            r["severity_score"] = 8
+            r["attention_index"] = 8
         elif pf < C.PF_NORMAL:
-            r["severity_score"] = 5
+            r["attention_index"] = 5
         else:
-            r["severity_score"] = 2
+            r["attention_index"] = 2
     else:
         if ph < C.PH_CRIT_LOW or ph > C.PH_CRIT_HIGH:
-            r["severity_score"] = 7
+            r["attention_index"] = 7
         elif ph < 7.30 or ph > 7.50:
-            r["severity_score"] = 5
+            r["attention_index"] = 5
         else:
-            r["severity_score"] = 2
+            r["attention_index"] = 2
 
-    s = r["severity_score"]
+    s = r["attention_index"]
     if s >= 9:
         r["priority_level"] = "IMMEDIATE ICU ACTION"
     elif s >= 7:
@@ -520,7 +524,7 @@ def _assess_severity(r, ph, clinical_context, on_vent):
         r["clinical_flags"].append("Mixed Disorder")
 
     if r["priority_level"] == "IMMEDIATE ICU ACTION":
-        r["action_plan"] += [
+        r["clinical_considerations"] += [
             "Increase PEEP (stepwise, titrated strategy)",
             "Optimize FiO2 to target SpO2 88-95%",
             "Apply lung-protective ventilation (4-6 mL/kg IBW)",
@@ -528,4 +532,4 @@ def _assess_severity(r, ph, clinical_context, on_vent):
             "Evaluate for ECMO referral if refractory hypoxemia",
         ]
     if "Respiratory Acidosis" in r["primary_disorder"] and not r["secondary_disorder"]:
-        r["action_plan"].append("Increase minute ventilation (raise RR carefully)")
+        r["clinical_considerations"].append("Increase minute ventilation (raise RR carefully)")

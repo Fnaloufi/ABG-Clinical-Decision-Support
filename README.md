@@ -4,6 +4,8 @@
 
 **⚠️ This tool does not replace clinical judgment.** It is not a standalone diagnostic or treatment device. Every output requires clinical correlation and professional review.
 
+> **Version status:** `v1.0.0` is a *clinical-logic implementation* (software-verified by an internal test suite). It is **not yet clinically validated for deployment**; formal clinical validation is a planned, separate phase.
+
 ---
 
 ## Overview
@@ -21,14 +23,14 @@ This engine takes a blood-gas sample plus optional ventilator and electrolyte da
 | **Oxygenation** | PaO₂ interpretation (spontaneous) and P/F ratio (ventilated) |
 | **ARDS staging** | Berlin-style severity (PEEP ≥ 5 gated) with explicit criteria limitations |
 | **Ventilation** | IBW (Devine) + lung-protective tidal-volume check; RSBI weaning index |
-| **Triage** | Risk flag, heuristic severity score, priority level, clinical flags, action plan |
+| **Triage** | Risk flag, rule-based Clinical Attention Index (heuristic, non-prognostic), priority level, clinical flags, clinician review considerations |
 
 ## Safety design
 
 - **Input validation** rejects physiologically impossible values (e.g. pH 8.5, FiO₂ 500%) and warns on unusual ones.
 - **Henderson–Hasselbalch consistency check** catches internally inconsistent samples (likely lab/data-entry errors).
 - **FiO₂ scale guard** auto-detects the common 0.5-vs-50 error.
-- The **severity score is explicitly labelled** as a custom heuristic, **not** a validated score (APACHE/SOFA).
+- The **Clinical Attention Index is explicitly labelled** as a rule-based heuristic, **non-prognostic**, and **not** a validated score (APACHE/SOFA).
 
 ## Project structure
 
@@ -85,6 +87,7 @@ python tests/test_engine.py
 - ARDS staging uses P/F only — full Berlin criteria (imaging, onset, cardiac exclusion) require clinician confirmation.
 - Severity score is a triage heuristic, not a validated mortality/severity scale.
 - Not a regulated medical device; **not for autonomous clinical use.**
+- Clinical deployment may require institutional approval, clinical validation, cybersecurity controls, health-data governance compliance, quality-management processes, and potentially medical-device regulatory assessment depending on the intended use and implementation context.
 
 ## License
 
@@ -109,14 +112,14 @@ See `LICENSE`.
 - تقييم الأكسجة (PaO₂ ونسبة P/F).
 - تصنيف ARDS حسب Berlin (بشرط PEEP ≥ 5) مع توضيح حدود المعايير.
 - حساب الوزن المثالي (IBW) والتحقق من التهوية الواقية للرئة، ومؤشر الفطام RSBI.
-- تصنيف الخطورة والأولوية وخطة الإجراء.
+- مؤشر الانتباه السريري (اجتهادي، غير تنبّؤي) ومستوى الأولوية واعتبارات لمراجعة الأخصائي.
 
 ## السلامة
 
 - التحقق من المدخلات ورفض القيم المستحيلة فسيولوجياً.
 - فحص اتساق Henderson–Hasselbalch لكشف الأخطاء المخبرية.
 - كشف خطأ إدخال FiO₂ الشائع (0.5 مقابل 50).
-- درجة الخطورة **اجتهادية** وليست مقياساً معتمداً.
+- مؤشر الانتباه السريري **اجتهادي وغير تنبّؤي** وليس مقياساً معتمداً (مثل APACHE/SOFA).
 
 ## التشغيل
 

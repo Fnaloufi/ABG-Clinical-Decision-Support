@@ -3,6 +3,9 @@ constants.py
 =============
 Clinical thresholds and physiological reference ranges for the ABG CDSS.
 
+Project : CritiCore-CDSS
+Author  : Fahad Aloufi (Head of Respiratory Therapy)
+
 All clinically-meaningful numbers live here (single source of truth) so the
 engine contains no "magic numbers". Every value is referenced to a standard
 critical-care / acid-base source and can be reviewed by a clinician in one place.
@@ -115,11 +118,15 @@ VALIDATION_RANGES = {
 }
 
 # --------------------------------------------------------------------------- #
-#  Severity scoring (CUSTOM HEURISTIC - not a validated score)
+#  Clinical attention index (RULE-BASED HEURISTIC - not a validated score)
 # --------------------------------------------------------------------------- #
-# NOTE: This is an internal triage heuristic, NOT APACHE II / SOFA / any
-# validated clinical score. Always labelled as such in the output.
-SEVERITY_LABEL = "Custom heuristic severity index (0-10) - NOT a validated clinical score"
+# NOTE: This is a rule-based triage heuristic to direct clinician attention.
+# It is NOT a validated or prognostic score (NOT APACHE II / SOFA / etc.) and
+# carries no mortality/outcome prediction. Always labelled as such in the output.
+ATTENTION_INDEX_LABEL = (
+    "Rule-based Clinical Attention Index (0-10) - heuristic, non-prognostic; "
+    "NOT a validated clinical score"
+)
 
 # --------------------------------------------------------------------------- #
 #  Safety / positioning

@@ -3,6 +3,9 @@ cli.py
 ======
 Interactive command-line front-end for the ABG CDSS.
 
+Project : CritiCore-CDSS
+Author  : Fahad Aloufi (Head of Respiratory Therapy)
+
 Separated from the engine so that the same clinical logic can also power a
 web API or GUI later. All user I/O and error handling live here.
 
@@ -115,14 +118,14 @@ def print_results(r):
 
     print("\n  TRIAGE")
     print(f"   Risk flag           : {r['risk_flag']}")
-    print(f"   Severity score      : {r['severity_score']}/10  ({r['severity_label']})")
+    print(f"   Clinical attention  : {r['attention_index']}/10  ({r['attention_index_label']})")
     print(f"   Priority level      : {r['priority_level']}")
     if r["clinical_flags"]:
         print(f"   Clinical flags      : {', '.join(r['clinical_flags'])}")
 
-    if r["action_plan"]:
-        print("\n  ACTION PLAN")
-        for a in r["action_plan"]:
+    if r["clinical_considerations"]:
+        print("\n  CLINICAL CONSIDERATIONS (for clinician review - not directives)")
+        for a in r["clinical_considerations"]:
             print(f"   - {a}")
 
     print("\n" + line)

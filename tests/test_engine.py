@@ -106,7 +106,7 @@ r = run(ph=7.30, pco2=48, hco3=23, po2=60, na=140, cl=104,
 check("ARDS: P/F ratio = 75", r["pf_ratio"] == 75.0)
 check("ARDS: staged severe", "Severe ARDS" in r["context_interpretation"])
 check("ARDS: priority IMMEDIATE", r["priority_level"] == "IMMEDIATE ICU ACTION")
-check("ARDS: severity score 10", r["severity_score"] == 10)
+check("ARDS: attention index 10", r["attention_index"] == 10)
 check("ARDS: critical hypoxemia flag", "Critical Hypoxemia" in r["clinical_flags"])
 check("ARDS: IBW computed", r["ibw_kg"] is not None)
 check("ARDS: TV/kg computed", r["tv_per_kg"] is not None)

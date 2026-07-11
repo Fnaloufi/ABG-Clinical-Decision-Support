@@ -3,6 +3,9 @@ validation.py
 =============
 Physiological input validation for the ABG CDSS.
 
+Project : CritiCore-CDSS
+Author  : Fahad Aloufi (Head of Respiratory Therapy)
+
 Two levels of checking:
   1. HARD limits  -> value is physiologically impossible / a data-entry error.
                      analyze() will refuse to interpret and returns an error.
